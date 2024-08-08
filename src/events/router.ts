@@ -39,7 +39,7 @@ export async function createEventsRouter(redis: IRedis): Promise<Router> {
 
   router
     .post("/collect", validateEvent, async (req, res) => {
-      console.log("/events/collect");
+      console.log("/events/collect", req.body);
 
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
