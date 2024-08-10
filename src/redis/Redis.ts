@@ -63,4 +63,8 @@ export class Redis implements IRedis {
     //What is the type returned from memory stats?
     return (await this.client.memoryStats()) as RedisMemoryStats;
   }
+
+  public async lTrim(key: string, length: number, stop: number) {
+    return await this.client.lTrim(key, length, stop);
+  }
 }
