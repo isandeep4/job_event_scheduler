@@ -1,42 +1,47 @@
 import { IJob } from "./IJob";
 import { IJobScheduler } from "./IJobScheduler";
 
+interface SchedulerFunctions {
+  nextTick: (callback: () => void) => void;
+  setTimeout: (callback: () => void, delay: number) => NodeJS.Timeout;
+}
+const defaultSchedulerFunction: SchedulerFunctions = {
+  nextTick: process.nextTick,
+  setTimeout: setTimeout,
+};
+
 export class SimpleJobScheduler implements IJobScheduler {
-    constructor(private readonly job: IJob, private readonly delayWhenNoWorkDone: number) {
-    }
+  constructor(
+    private readonly job: IJob,
+    private readonly delayWhenNoWorkDone: number,
+    private readonly schedulerFunctions: SchedulerFunctions = defaultSchedulerFunction
+  ) {}
 
-    public run() {
-        this.scheduleNextTick();
-    }
+  public run() {
+    this.scheduleNextTick();
+  }
 
-    private async runAndReschedule() {
-        const workDone = await this.job.run();
-
-        this.reschedule(workDone);
+  private async runAndReschedule() {
+    const workDone = await this.job.run();
+    this.reschedule(workDone);
+  }
+  private reschedule(workDone: boolean) {
+    if (workDone || this.delayWhenNoWorkDone <= 0) {
+      this.scheduleNextTick();
+    } else {
+      this.scheduleDelayed();
     }
+  }
 
-    // TODO:
-    // Add unit tests for this logic.
-    // We need to dependency inject abstractions for nextTick and setTimout to write unit tests, though.
-    // Will do this later...
-    private reschedule(workDone: boolean) {
-        if(workDone || this.delayWhenNoWorkDone <= 0) {
-            this.scheduleNextTick();
-        }
-        else {
-            this.scheduleDelayed();
-        }
-    }
+  private scheduleNextTick() {
+    this.schedulerFunctions.nextTick(() => {
+      this.runAndReschedule();
+    });
+  }
 
-    private scheduleNextTick() {
-        process.nextTick(() => {
-            this.runAndReschedule();
-        });
-    }
-
-    private scheduleDelayed() {
-        setTimeout(() => {
-            this.runAndReschedule();
-        }, this.delayWhenNoWorkDone);
-    }
+  private scheduleDelayed() {
+    this.schedulerFunctions.setTimeout(() => {
+      this.runAndReschedule();
+    }, this.delayWhenNoWorkDone);
+  }
 }
